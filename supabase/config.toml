@@ -1,0 +1,3 @@
+# Authentication is explicitly verified with auth.getUser inside the function.
+[functions.create-child]
+verify_jwt = false
