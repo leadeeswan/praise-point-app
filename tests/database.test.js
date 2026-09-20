@@ -26,15 +26,82 @@ test("database enforces family boundaries and atomic point accounting", async (t
     );
   await authUser(1, "parent1@example.com");
   await authUser(2, "parent2@example.com");
-  await authUser(
-    3,
-    "kidone@children.praise.invalid",
-    {
-      praise_role: "child",
-      praise_parent_id: id(1),
-      praise_username: "kidone",
+  await t.test(
+    "original trigger reproduces the production admin creation failure",
+    async () => {
+      await db.exec("begin");
+      await assert.rejects(
+        authUser(
+          3,
+          "kidone@children.praise.invalid",
+          { provider: "email" },
+          { name: "아이1", age: 8 },
+        ),
+        /Reserved child login address/,
+      );
+      await db.exec("rollback");
     },
-    { name: "아이1", age: 8 },
+  );
+  await db.exec(
+    await readFile(
+      new URL(
+        "../supabase/migrations/202609200002_defer_child_profile.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+  await t.test(
+    "GoTrue insert then app metadata update creates the child at commit",
+    async () => {
+      await db.exec("begin");
+      await authUser(
+        3,
+        "kidone@children.praise.invalid",
+        { provider: "email" },
+        { name: "아이1", age: 8 },
+      );
+      assert.equal(
+        (await db.query("select * from public.profiles where id=$1", [id(3)]))
+          .rows.length,
+        0,
+      );
+      await db.query("update auth.users set raw_app_meta_data=$1 where id=$2", [
+        JSON.stringify({
+          provider: "email",
+          praise_role: "child",
+          praise_parent_id: id(1),
+          praise_username: "kidone",
+        }),
+        id(3),
+      ]);
+      await db.exec("commit");
+      const profile = (
+        await db.query("select * from public.profiles where id=$1", [id(3)])
+      ).rows[0];
+      assert.equal(profile.role, "child");
+      assert.equal(profile.parent_id, id(1));
+      assert.equal(profile.username, "kidone");
+      assert.equal(profile.balance, 0);
+    },
+  );
+  await t.test(
+    "forged child metadata without admin metadata rolls back the auth user",
+    async () => {
+      await db.exec("begin");
+      await authUser(
+        7,
+        "forged@children.praise.invalid",
+        {},
+        { name: "위조", age: 8, praise_role: "child", praise_parent_id: id(1) },
+      );
+      await assert.rejects(db.exec("commit"), /Reserved child login address/);
+      assert.equal(
+        (await db.query("select * from auth.users where id=$1", [id(7)])).rows
+          .length,
+        0,
+      );
+    },
   );
   await authUser(
     4,

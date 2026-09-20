@@ -27,7 +27,7 @@ npm run dev
 
 프로젝트: `https://fcocaepkerctaamelmnk.supabase.co`
 
-1. SQL Editor에서 `supabase/migrations/202609200001_initial.sql`을 **한 번** 실행합니다. 기존 테이블이 없는 새 프로젝트 기준입니다.
+1. SQL Editor에서 `supabase/migrations/`의 SQL 파일을 파일명 순서대로 각각 **한 번** 실행합니다. 기존 테이블이 없는 새 프로젝트 기준입니다.
 2. Edge Functions에 `create-child`를 배포합니다. Dashboard의 에디터에 `supabase/functions/create-child/index.ts` 내용을 붙여 넣거나 CLI를 사용합니다.
 
 ```sh
@@ -42,7 +42,7 @@ npx supabase functions deploy create-child --no-verify-jwt
 4. 이메일 가입 확인을 사용하는 경우 메일의 확인 링크를 눌러 가입을 마칩니다. 공개 서비스에서는 필요에 따라 SMTP를 설정합니다.
 5. 아이 인증번호는 숫자 6~12자리입니다. Supabase Auth의 최소 비밀번호 길이는 6으로 설정해야 하며, 숫자 외 문자 필수 정책을 켜면 아이 등록이 실패합니다. 부모의 앱 회원가입 화면은 8자 이상을 요구합니다.
 
-아이의 아이디는 내부적으로 `<아이디>@children.praise.invalid` 형태의 Supabase Auth 계정에 매핑되며 이메일 주소는 아이에게 필요하지 않습니다. 아이디는 서비스 전체에서 유일해야 합니다. 인증번호는 Supabase Auth에서 해시 처리하며 별도 테이블에 저장하지 않습니다. 아이 역할과 가족 연결은 관리자만 수정할 수 있는 `app_metadata`와 인증 트리거를 사용합니다.
+아이의 아이디는 내부적으로 `<아이디>@children.praise.invalid` 형태의 Supabase Auth 계정에 매핑되며 이메일 주소는 아이에게 필요하지 않습니다. 아이디는 서비스 전체에서 유일해야 합니다. 인증번호는 Supabase Auth에서 해시 처리하며 별도 테이블에 저장하지 않습니다. 아이 역할과 가족 연결은 관리자만 수정할 수 있는 `app_metadata`와 인증 트리거를 사용합니다. Auth는 계정 INSERT 이후 같은 트랜잭션에서 관리자 메타데이터를 저장하므로, 프로필 트리거는 트랜잭션 종료 시 최종 데이터를 읽습니다.
 
 ## GitHub Pages 배포
 
